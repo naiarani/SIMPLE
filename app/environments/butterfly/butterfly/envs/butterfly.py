@@ -9,376 +9,239 @@ from stable_baselines import logger
 
 from .classes import *
 
-class ButterflyEnv(gym.Env):
+class CalicoEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
     def __init__(self, verbose = False, manual = False):
-        super(ButterflyEnv, self).__init__()
-        self.name = 'butterfly'
-        self.n_players = 3
-
+        super(CalicoEnv, self).__init__()
+        self.name = 'calico'
         self.manual = manual
 
-        self.board_size = 7
-        self.squares = self.board_size * self.board_size
+        # Defining players
+        self.n_players = 2; # two-player for simplicity
+        self.player_scores = [0, 0]  # Assuming 2 players for now
 
-        self.tile_types = 11
-        
-        self.max_score = 100
-        
-        self.total_positions = self.squares + self.n_players + 1
+        self.player_hands = [self.draw_starting_tiles(2) for _ in range(self.n_players)]
 
-        self.set_contents()
-        self.nets = [5,7,16, 24, 32, 41, 43]
-        self.total_tiles = sum([x['count'] for x in self.contents])
+        # Defining tiles
+        self.colors = ['red', 'yellow', 'green', 'light blue', 'navy', 'purple']
+        self.patterns = ['stripes', 'dots', 'fern', 'quatrefoil', 'flowers', 'vines']
+        unique_tiles = list(itertools.product(self.colors, self.patterns))
+        self.contents = [{'color': color, 'pattern': pattern} for color, pattern in unique_tiles for _ in range(3)]
 
-        self.action_space = gym.spaces.Discrete(self.total_tiles  * 2)
-        self.observation_space = gym.spaces.Box(0, 1, (self.total_positions * self.total_tiles + self.squares + 4 + self.n_players + self.action_space.n ,))
-        self.verbose = verbose
+        # Defining 5x5 square "quilt" grid
+        self.quilt_size = 5
+        self.num_squares = self.quilt_length * self.quilt_length # Square grid board for simplicity
+        self.grid_shape = (self.grid_length, self.grid_length)
+        self.action_space = gym.spaces.Discrete(self.num_squares)
 
-
-    def set_contents(self):
-        self.contents = []
-
-        for colour in ['R','B','G','Y']:
-            for value in range(1, 6):
-                self.contents.append({'tile': Butterfly, 'info': {'name': f'{colour}{value}butterfly', 'colour': colour, 'value': value}, 'count': 2} )
-            self.contents.append({'tile': Butterfly, 'info': {'name': f'{colour}Xbutterfly', 'colour': colour, 'value': 0}, 'count': 1} )
-
-        self.contents.append({'tile': Flower, 'info': {'name': 'flower'}, 'count':  13})
-
-        for value in range(1,10):
-            self.contents.append({'tile': Dragonfly, 'info': {'name': 'dragonfly', 'value': value}, 'count':  1})
-
-        for value in range(1,10):
-            self.contents.append({'tile': LightningBug,  'info': {'name': 'lightningbug', 'value': value}, 'count':  1})
-
-        for value in range(1,10):
-            self.contents.append({'tile': Cricket, 'info': {'name': 'cricket', 'value': value}, 'count':  1})
-
-        self.contents.append({'tile': Bee, 'info': {'name': 'bee'}, 'count':  6})
-
-        for value in range(10,16):
-            self.contents.append({'tile': Honeycomb, 'info': {'name': 'honeycomb', 'value': value}, 'count':  1})
-        
-        for value in range(-4,-8, -1):
-            self.contents.append({'tile': Wasp, 'info': {'name': 'wasp', 'value': value}, 'count':  1})
-
-        
+    # Obervation / discritizing the board
     @property
     def observation(self):
-        obs = np.zeros(([self.total_positions, self.total_tiles]))
-        player_num = self.current_player_num
+        if self.players[self.current_player_num].token.number == 1:
+            position = np.array([x.number for x in self.board]).reshape(self.grid_shape)
+        else:
+            position = np.array([-x.number for x in self.board]).reshape(self.grid_shape)
 
-        # print('Tiles')
-        for s, tile in enumerate(self.board.tiles):
-            if tile is not None:
-                obs[s][tile.id] = 1
-                # print(s, tile.id)
-
-        # print('Positions')
-        for i in range(self.n_players):
-            player = self.players[player_num]
-
-            for tile in player.position.tiles:
-                obs[self.squares + i][tile.id] = 1
-                # print(self.squares + i, tile.id)
-
-            player_num = (player_num + 1) % self.n_players
-        
-        # print('DrawBag')
-        for tile in self.drawbag.tiles:
-            obs[-1][tile.id] = 1
-            # print(len(obs)-1, tile.id)
-
-        ret = obs.flatten()
-
-        # print('Hudson')
-        hudson_obs = np.zeros((self.squares, ))
-        hudson_obs[self.board.hudson] = 1
-        # print(len(ret) + self.board.hudson)
-
-        ret = np.append(ret, hudson_obs)
-
-        # print('Hudson facing')
-        hudson_facing_obs = np.zeros((4, ))
-        for i, x in enumerate(['U','D','L','R']):
-            if self.board.hudson_facing == x:
-                hudson_facing_obs[i] = 1
-                # print(len(ret) + i)
-
-        ret = np.append(ret, hudson_facing_obs)
-
-        # print('Score')
-        score_obs = np.zeros((self.n_players, ))
-
-        player_num = self.current_player_num
-        for i in range(self.n_players):
-            player = self.players[player_num]
-            score_obs[i] = player.position.score / self.max_score
-            # print(len(ret) + i)
-            # print(score_obs[i])
-            player_num = (player_num + 1) % self.n_players
-
-        ret = np.append(ret, score_obs)
-
-        # print('Legal actions')
-        # for i in range(len(self.legal_actions)):
-        #     if self.legal_actions[i] == 1:
-        #         print(len(ret) + i)
-
-        ret = np.append(ret, self.legal_actions)
-
-        return ret
+        la_grid = np.array(self.legal_actions).reshape(self.grid_shape)
+        out = np.stack([position,la_grid], axis = -1)
+        return out
 
     @property
     def legal_actions(self):
-        legal_actions = np.zeros(self.action_space.n)
-
-        # UP / DOWN
-        for factor in [-1,1]:
-            if (factor == -1 and self.board.hudson_facing == 'D') or (factor == 1 and self.board.hudson_facing == 'U'):
-                pass
+        legal_actions = []
+        for action_num in range(len(self.board)):
+            if self.board[action_num].number==0: #empty square
+                legal_actions.append(1)
             else:
-                current_square = self.board.hudson
-                found_net = False
-                for i in range(self.board_size):
-                    current_square = current_square + factor * self.board_size
-                    if 0 <= current_square < self.squares:
-                        tile = self.board.tiles[current_square]
-                        if tile is not None:
-                            legal_actions[tile.id] = 1
-                            if found_net:
-                                legal_actions[tile.id + self.total_tiles] = 1
-                        else:
-                            if self.board.nets[current_square] == 1:
-                                found_net = True
-                    else:
-                        break
-
-        # LEFT / RIGHT
-        for factor in [-1,1]:
-            if (factor == -1 and self.board.hudson_facing == 'R') or (factor == 1 and self.board.hudson_facing == 'L'):
-                pass
-            else:
-                current_square = self.board.hudson
-                found_net = False
-                for i in range(self.board_size):
-                    current_square = current_square + factor
-                    if (factor == 1 and current_square % self.board_size != 0) or (factor == -1 and current_square % self.board_size != self.board_size - 1) :
-                        tile = self.board.tiles[current_square]
-                        if tile is not None:
-                            legal_actions[tile.id] = 1
-                            if found_net:
-                                legal_actions[tile.id + self.total_tiles] = 1
-                        else:
-                            if self.board.nets[current_square] == 1:
-                                found_net = True
-                    else:
-                        break
-
-
-        return legal_actions
-
-
-
-
-
-    def score_game(self):
-        reward = [0.0] * self.n_players
-        scores = [p.position.score for p in self.players]
-        best_score = max(scores)
-        worst_score = min(scores)
-        winners = []
-        losers = []
-        for i, s in enumerate(scores):
-            if s == best_score:
-                winners.append(i)
-            if s == worst_score:
-                losers.append(i)
-
-        for w in winners:
-            reward[w] += 1.0 / len(winners)
+                legal_actions.append(0)
+        return np.array(legal_actions)
         
-        for l in losers:
-            reward[l] -= 1.0 / len(losers)
 
-        return reward
+    ####### Define scoring based of simplified version including 4 ways to score #######
+    def check_score(self):
+        score = 0
+        score += self.check_button_score()
+        score += self.check_callie_score()
+        score += self.check_rumi_score()
+        score += self.check_coconut_score()
+        return score
+
+    def check_button_score(self):
+        score = 0
+        for row in range(len(self.board)):
+            for col in range(len(self.board[row])):
+                # Check if the current tile has two neighbors of the same color
+                if self.has_same_color_neighbors(row, col):
+                    # Increment score by 3 for each set of 3 same-color adjacent tiles
+                    score += 3
+        return score
+
+    def has_same_color_neighbors(self, row, col):
+        # Check if the current tile has two neighbors of the same color
+        color = self.board[row][col]['color']
+        adjacent_tiles = [(row-1, col), (row+1, col), (row, col-1), (row, col+1)]
+        same_color_neighbors = 0
+        for r, c in adjacent_tiles:
+            if 0 <= r < len(self.board) and 0 <= c < len(self.board[0]):
+                if self.board[r][c]['color'] == color:
+                    same_color_neighbors += 1
+        return same_color_neighbors >= 2
+
+    def check_callie_score(self):
+        score = 0
+        # Check for "callie" scoring
+        for row in range(len(self.board)):
+            for col in range(len(self.board[row])):
+                if self.has_callie_shape(row, col):
+                    score += 3
+        return score
+
+    def has_callie_shape(self, row, col):
+        # Check if the tile at the given position forms an L shape with the same pattern
+        pattern = self.board[row][col]['pattern']
+        if pattern not in ['stripes', 'dots']:
+            return False
+        
+        # Define the offsets for the tiles in the L shape
+        offsets = [(0, 1), (1, 0), (1, 1)]
+        
+        # Check if the adjacent tiles have the same pattern
+        for r_off, c_off in offsets:
+            r, c = row + r_off, col + c_off
+            if not (0 <= r < len(self.board) and 0 <= c < len(self.board[0]) and self.board[r][c]['pattern'] == pattern):
+                return False
+        
+        return True
+
+    def check_rumi_score(self):
+        score = 0
+        # Check for "rumi" scoring
+        for row in range(len(self.board)):
+            for col in range(len(self.board[row])):
+                if self.has_rumi_shape(row, col):
+                    score += 5
+        return score
+
+    def has_rumi_shape(self, row, col):
+        # Check if the tile at the given position forms a straight line of the same pattern
+        pattern = self.board[row][col]['pattern']
+        if pattern not in ['fern', 'quatrefoil']:
+            return False
+        
+        # Define the directions to check for the straight line
+        directions = [(0, 1), (1, 0)]
+        
+        # Check if the adjacent tiles have the same pattern in any of the directions
+        for r_dir, c_dir in directions:
+            curr_row, curr_col = row, col
+            count = 1  # Count the number of tiles with the same pattern
+            while True:
+                curr_row += r_dir
+                curr_col += c_dir
+                if not (0 <= curr_row < len(self.board) and 0 <= curr_col < len(self.board[0])):
+                    break
+                if self.board[curr_row][curr_col]['pattern'] == pattern:
+                    count += 1
+                else:
+                    break
+            if count >= 3:
+                return True
+        
+        return False
+
+    def check_coconut_score(self):
+        score = 0
+        # Check for "coconut" scoring
+        for row in range(len(self.board)):
+            for col in range(len(self.board[row])):
+                if self.has_coconut_shape(row, col):
+                    score += 7
+        return score
+
+    def has_coconut_shape(self, row, col):
+        # Check if the tile at the given position forms a cluster of the same pattern with 5 or more adjacent tiles
+        pattern = self.board[row][col]['pattern']
+        if pattern not in ['flowers', 'vines']:
+            return False
+        
+        # Define the directions to check for adjacent tiles
+        directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+        
+        # Depth-first search to find all adjacent tiles with the same pattern
+        def dfs(r, c, visited):
+            visited.add((r, c))
+            count = 1  # Count the number of adjacent tiles with the same pattern
+            for r_dir, c_dir in directions:
+                new_r, new_c = r + r_dir, c + c_dir
+                if (0 <= new_r < len(self.board) and 0 <= new_c < len(self.board[0])
+                        and (new_r, new_c) not in visited
+                        and self.board[new_r][new_c]['pattern'] == pattern):
+                    count += dfs(new_r, new_c, visited)
+            return count
+        
+        visited = set()
+        if dfs(row, col, visited) >= 5:
+            return True
+        
+        return False
 
 
-    @property
-    def current_player(self):
-        return self.players[self.current_player_num]
+        # Initialize game state
+        self.reset()
 
-    def convert_action(self, tile_id):
-        if tile_id < self.total_tiles:
-            net = False
+    def reset(self):
+        # Reset quilt board and player scores
+        self.quilt_board = np.zeros(self.quilt_size, dtype=int)
+        self.player_scores = [0, 0]  # Reset scores for 2 players
+        self.player_hands = [self.draw_starting_tiles(2) for _ in range(self.n_players)]
+        return self.quilt_board
+
+    def draw_starting_tiles(self, n):
+        return [self.draw_tile() for _ in range(n)]
+    
+    def draw_tile(self):
+        if self.contents:
+            return self.contents.pop()
         else:
-            net = True        
-            tile_id = tile_id - self.total_tiles
-
-        square = [i for i, tile in enumerate(self.board.tiles) if tile is not None and tile.id == tile_id][0]
-
-        return net, square
-
-
-    def choose_net_tile(self):
-        logger.debug(f'Player {self.current_player.id} choosing extra tile using net')
-        self.current_player.position.add(self.drawbag.draw(1))
-
-    def choose_tile(self, square):
-        tile = self.board.remove(square)
-        if tile is None:
-            logger.debug(f"Player {self.current_player.id} trying to pick tile from square {square} but doesn't exist!")
-            raise Exception('tile not found')
-
-        logger.debug(f"Player {self.current_player.id} picking {tile.symbol}")
-        self.current_player.position.add([tile])
-
-
-    def place_hudson(self):
-        self.board.hudson = random.randint(0, self.squares - 1)
-        self.board.hudson_facing = random.choice(['U', 'D', 'L', 'R'])
-
+            return None
 
 
     def step(self, action):
+        color_index = action // len(self.patterns)
+        pattern_index = action % len(self.patterns)
+        color = self.colors[color_index]
+        pattern = self.patterns[pattern_index]
         
-        reward = [0] * self.n_players
-        done = False
-
-        # check move legality
-        if self.legal_actions[action] == 0:
-            reward = [1.0/(self.n_players-1)] * self.n_players
-            reward[self.current_player_num] = -1
-            done = True
-
+        # Find an empty spot on the quilt board to place the tile
+        empty_spots = np.argwhere(self.quilt_board == 0)
+        if len(empty_spots) == 0:
+            # No empty spots left, terminate the episode
+            return self.quilt_board, 0, True, {}
         
-        else:
-            # pick the tile and optional bonus tile
-            net, square = self.convert_action(action)
-            
-            self.choose_tile(square)
-
-            if net:
-                self.choose_net_tile()
-
-            # move and turn hudson
-            if 0 < square - self.board.hudson < self.board_size:
-                self.board.hudson_facing = 'R'
-            elif -self.board_size < square - self.board.hudson < 0 :
-                self.board.hudson_facing = 'L'
-            elif square > self.board.hudson:
-                self.board.hudson_facing = 'D'
-            elif square < self.board.hudson:
-                self.board.hudson_facing = 'U'
-            
-            self.board.hudson = square
-
-            if sum(self.legal_actions) == 0:
-                reward = self.score_game()
-                done = True
-            else:
-                self.turns_taken += 1
-                self.current_player_num = (self.current_player_num + 1) % self.n_players
-
-        self.done = done
-
-        return self.observation, reward, done, {}
-
-
-    def reset(self):
-        self.drawbag = DrawBag(self.contents)
-        self.players = []
-
-        player_id = 1
-        for p in range(self.n_players):
-            self.players.append(Player(str(player_id)))
-            player_id += 1
-
-
-        self.current_player_num = 0
-        self.done = False
-        logger.debug(f'\n\n---- NEW GAME ----')
-
-        self.board = Board(self.board_size)
+        # Choose a random empty spot to place the tile
+        row, col = empty_spots[np.random.randint(len(empty_spots))]
         
-        self.board.fill(self.drawbag.draw(self.squares))
-
-        for net in self.nets:
-            self.board.add_net(net)
-
-        self.place_hudson()
-
-        self.turns_taken = 0
-
-        return self.observation
-
-
-    def render(self, mode='human', close=False):
+        # Place the chosen tile on the quilt board
+        self.quilt_board[row, col] = action
         
-        if close:
-            return
-
-        if not self.done:
-            logger.debug(f'\n\n-------TURN {self.turns_taken + 1}-----------')
-            logger.debug(f"It is Player {self.current_player.id}'s turn to choose")
-        else:
-            logger.debug(f'\n\n-------FINAL POSITION-----------')
+        # Replenish players' hands
+        for player_id in range(self.n_players):
+            self.replenish_hand(player_id)
         
-        out = '\n'
-        for square in range(self.squares):
-            if self.board.hudson == square:
-                if self.board.hudson_facing == 'R':
-                    out += '>H>\t'
-                elif self.board.hudson_facing == 'L':
-                    out += '<H<\t'
-                elif self.board.hudson_facing == 'U':
-                    out += '^H^\t'
-                elif self.board.hudson_facing == 'D':
-                    out += 'vHv\t'
-            elif self.board.tiles[square] == None:
-                if self.board.nets[square]:
-                    out += '-🥅-\t'
-                else:
-                    out += '---\t'
-            else:
-                out += self.board.tiles[square].symbol + ':' + str(self.board.tiles[square].id) + '\t' 
-
-            if square % self.board_size == self.board_size - 1:
-                logger.debug(out)
-                out = ''
-            
-        logger.debug('\n')
-
-
-        for p in self.players:
-            logger.debug(f'Player {p.id}\'s position')
-            if p.position.size() > 0:
-
-                out = '  '.join([tile.symbol for tile in sorted(p.position.tiles, key=lambda x: x.id) if tile.type != 'cricket'])
-                out += '  ' + '  '.join([tile.symbol for tile in p.position.tiles if tile.type == 'cricket'])
-
-                logger.debug(out)
-            else:
-                logger.debug('Empty')
-
-        logger.debug(f'\n{self.drawbag.size()} tiles left in drawbag')
-
-        if self.verbose:
-            obs_sparse = [i if o == 1 else (i,o) for i,o in enumerate(self.observation) if o != 0]
-            logger.debug(f'\nObservation: \n{obs_sparse}')
-
-        if self.done:
-            logger.debug(f'\n\nGAME OVER')
-        else:
-            logger.debug(f'\nLegal actions: {[i for i,o in enumerate(self.legal_actions) if o != 0]}')
+        # Calculate the score for the current state
+        score = self.check_score()
         
-        logger.debug(f'\n')
+        # Determine if the episode is done (if the quilt board is full)
+        done = np.count_nonzero(self.quilt_board) == self.num_squares
+        
+        return self.quilt_board, score, done, {}
 
-        for p in self.players:
-            logger.debug(f'Player {p.id} points: {p.position.score}')
 
+    def render(self, mode='human'):
+        # Display the current state of the quilt board
+        print("Current Quilt Board:")
+        print(self.quilt_board)
 
-    def rules_move(self):
-        raise Exception('Rules based agent is not yet implemented for Butterfly!')
+    def close(self):
+        pass
