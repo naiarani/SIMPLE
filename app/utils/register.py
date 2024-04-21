@@ -20,6 +20,9 @@ def get_environment(env_name):
         elif env_name in ('frouge'):
             from frouge.envs.frouge import FlammeRougeEnv
             return FlammeRougeEnv
+        elif env_name in ('calico'):
+            from calico.envs.calico import CalicoEnv
+            return CalicoEnv
         else:
             raise Exception(f'No environment found for {env_name}')
     except SyntaxError as e:
