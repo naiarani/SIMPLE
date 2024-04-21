@@ -19,7 +19,6 @@ class CalicoEnv(gym.Env):
 
         self.n_rounds = 25
 
-        self.observation_space = gym.spaces.Box(low=-1, high=1, shape=(observation_size,), dtype=np.float32)
         self.n_players = 1 # player 0 and player 1
         self.current_player_num = 0 
 
