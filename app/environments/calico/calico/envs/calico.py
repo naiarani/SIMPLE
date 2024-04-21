@@ -1,8 +1,6 @@
 
 import gym
 import numpy as np
-import random
-
 import config
 
 from stable_baselines import logger
@@ -10,7 +8,11 @@ from stable_baselines import logger
 from .classes import *
 
 class CalicoEnv(gym.Env):
+    metadata = {'render.modes': ['human']}
+
     def __init__(self, verbose = False, manual = False):
+        super(SushiGoEnv, self).
+        
         super(CalicoEnv, self).__init__()
         self.name = 'calico'
         self.manual = manual
@@ -18,6 +20,10 @@ class CalicoEnv(gym.Env):
         # Defining players
         self.n_players = 2; # two-player for simplicity
         self.player_scores = [0, 0]  # Assuming 2 players for now
+        self.cards_per_player = 2
+        self.card_types = 36
+
+        self.n_rounds = 25
 
         # Defining tiles
         self.colors = ['red', 'yellow', 'green', 'light blue', 'navy', 'purple']
