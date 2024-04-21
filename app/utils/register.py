@@ -52,6 +52,9 @@ def get_network_arch(env_name):
     elif env_name in ('frouge'):
         from models.frouge.models import CustomPolicy
         return CustomPolicy
+    elif env_name in ('calico'):
+        from models.calico.models import CustomPolicy
+        return CustomPolicy
     else:
         raise Exception(f'No model architectures found for {env_name}')
 
