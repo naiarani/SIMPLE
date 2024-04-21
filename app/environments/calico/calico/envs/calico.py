@@ -213,9 +213,12 @@ class CalicoEnv(gym.Env):
         
         return False
 
-
+    
         # Initialize game state
         self.reset()
+
+    def draw_starting_tiles(self, n):
+        return [self.draw_tile() for _ in range(n)]
 
     def reset(self):
         self.round = 0
@@ -223,6 +226,8 @@ class CalicoEnv(gym.Env):
         self.discard = Discard()
         self.players = []
         self.action_bank = []
+        self.player_hands = [self.draw_starting_tiles(2) for _ in range(self.n_players)]
+
     
         player_id = 1
         for p in range(self.n_players):
