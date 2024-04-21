@@ -22,7 +22,7 @@ class CalicoEnv(gym.Env):
         self.n_players = 1 # player 0 and player 1
         self.current_player_num = 0 
 
-        self.color = ['red', 'yellow', 'green', 'light blue', 'navy', 'purple']
+        self.colors = ['red', 'yellow', 'green', 'light blue', 'navy', 'purple']
         self.patterns = ['stripes', 'dots', 'fern', 'quatrefoil', 'flowers', 'vines']
         unique_tiles = list(itertools.product(self.colors, self.patterns))
         self.contents = [{'color': color, 'pattern': pattern} for color, pattern in unique_tiles for _ in range(3)]
