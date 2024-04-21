@@ -40,8 +40,6 @@ class CalicoEnv(gym.Env):
         self.quilt_boards = [np.zeros(self.board_size, dtype=int) for _ in range(self.n_players)]
 
         self.player_hands = [self.draw_starting_tiles(2) for _ in range(self.n_players)]
-
-        
         self.hands = [self.get_random_tiles() for _ in range(self.n_players)]
 
     # Obervation / discritizing the board
@@ -192,14 +190,14 @@ class CalicoEnv(gym.Env):
         self.current_player_num = 0
         self.turns_taken = 0
 
-        def draw_starting_tiles(self, n):
-            return [self.draw_tile() for _ in range(n)]
+    def draw_starting_tiles(self, n):
+        return [self.draw_tile() for _ in range(n)]
 
-        def draw_tile(self):
-            if self.contents:
-                return self.contents.pop()
-            else:
-                return None
+    def draw_tile(self):
+        if self.contents:
+            return self.contents.pop()
+         else:
+            return None
 
         logger.debug(f'\n\n---- NEW GAME ----')
 
