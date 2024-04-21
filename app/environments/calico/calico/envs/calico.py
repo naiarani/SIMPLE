@@ -11,7 +11,7 @@ from .classes import *
 class CalicoEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, verbose = False, manual = False):        
+    def __init__(self, verbose = True, manual = False):        
         super(CalicoEnv, self).__init__()
         self.name = 'calico'
         self.manual = manual
