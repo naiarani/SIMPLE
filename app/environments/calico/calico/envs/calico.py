@@ -10,8 +10,6 @@ from stable_baselines import logger
 from .classes import *
 
 class CalicoEnv(gym.Env):
-    metadata = {'render.modes': ['human']}
-
     def __init__(self, verbose = False, manual = False):
         super(CalicoEnv, self).__init__()
         self.name = 'calico'
@@ -20,8 +18,6 @@ class CalicoEnv(gym.Env):
         # Defining players
         self.n_players = 2; # two-player for simplicity
         self.player_scores = [0, 0]  # Assuming 2 players for now
-
-        self.player_hands = [self.draw_starting_tiles(2) for _ in range(self.n_players)]
 
         # Defining tiles
         self.colors = ['red', 'yellow', 'green', 'light blue', 'navy', 'purple']
@@ -34,6 +30,9 @@ class CalicoEnv(gym.Env):
         self.num_squares = self.quilt_length * self.quilt_length # Square grid board for simplicity
         self.grid_shape = (self.grid_length, self.grid_length)
         self.action_space = gym.spaces.Discrete(self.num_squares)
+
+        self.player_hands = [self.draw_starting_tiles(2) for _ in range(self.n_players)]
+
 
     # Obervation / discritizing the board
     @property
