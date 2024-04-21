@@ -18,6 +18,7 @@ class CalicoEnv(gym.Env):
 
         # Defining players
         self.n_players = 2; # two-player for simplicity
+        self.current_player_num = 0
         self.cards_per_player = 2
         self.card_types = 36
 
@@ -28,7 +29,7 @@ class CalicoEnv(gym.Env):
         self.colors = ['red', 'yellow', 'green', 'light blue', 'navy', 'purple']
         self.patterns = ['stripes', 'dots', 'fern', 'quatrefoil', 'flowers', 'vines']
         unique_tiles = list(itertools.product(self.colors, self.patterns))
-        self.contents = [{'color': color, 'pattern': pattern} for color, pattern in unique_tiles for _ in range(2)]
+        self.contents = [{'color': color, 'pattern': pattern} for color, pattern in unique_tiles for _ in range(3)]
 
         # Defining 5x5 square "quilt" grid
         self.quilt_size = 5
@@ -47,6 +48,7 @@ class CalicoEnv(gym.Env):
     def observation(self):
         # Initialize the observation array
         obs = np.zeros((self.num_squares, self.card_types), dtype=int)
+        player_num = self.current_player_num
         
         # Add the tiles on the quilt board to the observation
         for row in range(len(self.quilt_board)):
@@ -67,6 +69,8 @@ class CalicoEnv(gym.Env):
     def legal_actions(self):
         # Initialize the legal actions array
         legal_actions = np.zeros(self.num_squares)
+        player_num = self.current_player_num
+
         
         # Check each position on the quilt board
         for row in range(len(self.quilt_board)):
@@ -214,57 +218,122 @@ class CalicoEnv(gym.Env):
         self.reset()
 
     def reset(self):
-        # Reset quilt board and player scores
-        self.quilt_board = np.zeros(self.quilt_size, dtype=int)
-        self.player_scores = [0, 0]  # Reset scores for 2 players
-        self.player_hands = [self.draw_starting_tiles(2) for _ in range(self.n_players)]
-        return self.quilt_board
-
-    def draw_starting_tiles(self, n):
-        return [self.draw_tile() for _ in range(n)]
+        self.round = 0
+        self.deck = Deck(self.contents)
+        self.discard = Discard()
+        self.players = []
+        self.action_bank = []
     
-    def draw_tile(self):
-        if self.contents:
-            return self.contents.pop()
-        else:
-            return None
+        player_id = 1
+        for p in range(self.n_players):
+            self.players.append(Player(str(player_id)))
+            player_id += 1
+    
+        self.current_player_num = 0
+        self.done = False
+        self.reset_round()
+        logger.debug(f'\n\n---- NEW GAME ----')
+        return self.observation
+
 
 
     def step(self, action):
-        color_index = action // len(self.patterns)
-        pattern_index = action % len(self.patterns)
-        color = self.colors[color_index]
-        pattern = self.patterns[pattern_index]
-        
-        # Find an empty spot on the quilt board to place the tile
-        empty_spots = np.argwhere(self.quilt_board == 0)
-        if len(empty_spots) == 0:
-            # No empty spots left, terminate the episode
-            return self.quilt_board, 0, True, {}
-        
-        # Choose a random empty spot to place the tile
-        row, col = empty_spots[np.random.randint(len(empty_spots))]
-        
-        # Place the chosen tile on the quilt board
-        self.quilt_board[row, col] = action
-        
-        # Replenish players' hands
-        for player_id in range(self.n_players):
-            self.replenish_hand(player_id)
-        
-        # Calculate the score for the current state
-        score = self.check_score()
-        
-        # Determine if the episode is done (if the quilt board is full)
-        done = np.count_nonzero(self.quilt_board) == self.num_squares
-        
-        return self.quilt_board, score, done, {}
+      reward = [0] * self.n_players
+      done = False
+
+      # Check move legality
+      if self.legal_actions[action] == 0:
+          # Penalize the current player and reward others if the action is illegal
+          reward = [1.0 / (self.n_players - 1)] * self.n_players
+          reward[self.current_player_num] = -1
+          done = True
+      else:
+          # Play the card(s)
+          self.action_bank.append(action)
+
+          if len(self.action_bank) == self.n_players:
+              logger.debug(f'\nThe chosen cards are now played simultaneously')
+              for i, action in enumerate(self.action_bank):
+                  # Assuming you have a method to convert action to card(s)
+                  player = self.players[i]
+                  pickup_chopsticks, first_card, second_card = self.convert_action(action)
+                  self.play_card(first_card, player)
+
+                  if pickup_chopsticks:
+                      self.pickup_chopsticks(player)
+                      self.play_card(second_card, player)
+
+              self.action_bank = []
+              self.switch_hands()
+          
+          # Update current player number
+          self.current_player_num = (self.current_player_num + 1) % self.n_players
+
+          # Update turns taken
+          if self.current_player_num == 0:
+              self.turns_taken += 1
+
+          # Check if the round is over
+          if self.turns_taken == self.cards_per_player:
+              # Score the round
+              self.score_round()
+
+              # Check if the game is over
+              if self.round >= self.n_rounds:
+                  # Score puddings and end the game
+                  self.score_puddings()
+                  reward = self.score_game()
+                  done = True
+              else:
+                  # Reset the round
+                  self.render()
+                  self.reset_round()
+
+      self.done = done
+
+      # Return observation, reward, done flag, and additional information
+      return self.observation, reward, done, {}
 
 
-    def render(self, mode='human'):
-        # Display the current state of the quilt board
-        print("Current Quilt Board:")
-        print(self.quilt_board)
+    def render(self, mode='human', close=False):
+        if close:
+            return
+    
+        if self.turns_taken < self.cards_per_player:
+            logger.debug(f'\n\n-------ROUND {self.round} : TURN {self.turns_taken + 1}-----------')
+            logger.debug(f"It is Player {self.current_player.id}'s turn to choose")
+        else:
+            logger.debug(f'\n\n-------FINAL ROUND {self.round} POSITION-----------')
+    
+        for p in self.players:
+            logger.debug(f'\nPlayer {p.id}\'s hand')
+            if p.hand.size() > 0:
+                logger.debug('  '.join([str(card.order) + ': ' + card.symbol for card in sorted(p.hand.cards, key=lambda x: x.id)]))
+            else:
+                logger.debug('Empty')
+    
+            logger.debug(f'Player {p.id}\'s position')
+            if p.position.size() > 0:
+                logger.debug('  '.join([str(card.order) + ': ' + card.symbol + ': ' + str(card.id) for card in sorted(p.position.cards, key=lambda x: x.id)]))
+            else:
+                logger.debug('Empty')
+    
+        logger.debug(f'\n{self.deck.size()} cards left in deck')
+        logger.debug(f'{self.discard.size()} cards discarded')
+    
+        if self.verbose:
+            logger.debug(f'\nObservation: \n{[i if o == 1 else (i,o) for i,o in enumerate(self.observation) if o != 0]}')
+        
+        if not self.done:
+            logger.debug(f'\nLegal actions: {[i for i,o in enumerate(self.legal_actions) if o != 0]}')
+    
+        if self.done:
+            logger.debug(f'\n\nGAME OVER')
+    
+        if self.turns_taken == self.cards_per_player:
+            for p in self.players:
+                logger.debug(f'Player {p.id} points: {p.score}')
+
 
     def close(self):
         pass
