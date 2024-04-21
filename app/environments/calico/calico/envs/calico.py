@@ -4,6 +4,7 @@ import config
 import itertools
 from stable_baselines import logger
 from .classes import *
+import random
 
 class CalicoEnv(gym.Env):
     metadata = {'render.modes': ['human']}
@@ -40,7 +41,7 @@ class CalicoEnv(gym.Env):
         self.quilt_boards = [np.zeros(self.board_size, dtype=int) for _ in range(self.n_players)]
 
         self.player_hands = [self.draw_starting_tiles(2) for _ in range(self.n_players)]
-        self.hands = [self.get_random_tiles() for _ in range(self.n_players)]
+        # self.hands = [self.get_random_tiles() for _ in range(self.n_players)]
 
     # Obervation / discritizing the board
     @property
@@ -186,7 +187,7 @@ class CalicoEnv(gym.Env):
     def reset(self):
         # Reset quilt boards to empty
         self.quilt_boards = [np.zeros(self.board_size, dtype=int) for _ in range(self.n_players)]
-        self.hands = [self.get_random_tiles() for _ in range(self.n_players)]
+        self.player_hands = [self.draw_starting_tiles() for _ in range(self.n_players)]
         self.current_player_num = 0
         self.turns_taken = 0
 
