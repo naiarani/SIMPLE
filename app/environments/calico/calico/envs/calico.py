@@ -2,6 +2,7 @@
 import gym
 import numpy as np
 import config
+import itertools
 
 from stable_baselines import logger
 
