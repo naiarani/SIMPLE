@@ -83,7 +83,11 @@ class CalicoEnv(gym.Env):
         # Return the legal actions array
         return legal_actions
 
-        
+    def draw_tile(self):
+        if self.contents:
+            return self.contents.pop()
+        else:
+            return None    
 
     ####### Define scoring based of simplified version including 4 ways to score #######
     def check_score(self):
