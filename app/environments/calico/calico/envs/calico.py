@@ -29,7 +29,7 @@ class CalicoEnv(gym.Env):
 
         self.total_tiles = len(self.contents)
 
-        self.quilt_length = 5
+        self.quilt_size = 5
         self.grid_shape = (self.quilt_size, self.quilt_size)
         self.num_squares = self.quilt_size * self.quilt_size 
 
