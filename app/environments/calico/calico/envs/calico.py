@@ -28,7 +28,7 @@ class CalicoEnv(gym.Env):
         self.colors = ['red', 'yellow', 'green', 'light blue', 'navy', 'purple']
         self.patterns = ['stripes', 'dots', 'fern', 'quatrefoil', 'flowers', 'vines']
         unique_tiles = list(itertools.product(self.colors, self.patterns))
-        self.contents = [{'color': color, 'pattern': pattern} for color, pattern in unique_tiles for _ in range(3)]
+        self.contents = [{'color': color, 'pattern': pattern} for color, pattern in unique_tiles for _ in range(2)]
 
         # Defining 5x5 square "quilt" grid
         self.quilt_size = 5
