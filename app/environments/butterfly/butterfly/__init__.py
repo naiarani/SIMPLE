@@ -1,7 +1,7 @@
 from gym.envs.registration import register
 
 register(
-    id='Butterfly-v0',
-    entry_point='butterfly.envs:ButterflyEnv',
+    id='Calico-v0',
+    entry_point='calico.envs:CalicoEnvs',
 )
 
