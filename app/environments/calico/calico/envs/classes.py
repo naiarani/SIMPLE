@@ -1,5 +1,4 @@
 # Calico classes
-
 import random
 
 class CalicoTiles:
@@ -84,3 +83,4 @@ class CalicoTile(Card):
     @property
     def symbol(self):
         return f"{self.color[0].upper()}{self.pattern[0].upper()}"
+
