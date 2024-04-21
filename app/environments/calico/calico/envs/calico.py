@@ -11,18 +11,18 @@ from .classes import *
 class CalicoEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, verbose = True, manual = False):        
+    def __init__(self, verbose = False, manual = False):        
         super(CalicoEnv, self).__init__()
         self.name = 'calico'
         self.manual = manual
 
         # Defining players
         self.n_players = 2; # two-player for simplicity
-        self.player_scores = [0, 0]  # Assuming 2 players for now
         self.cards_per_player = 2
         self.card_types = 36
 
         self.n_rounds = 25
+        self.max_score = 100
 
         # Defining tiles
         self.colors = ['red', 'yellow', 'green', 'light blue', 'navy', 'purple']
@@ -34,32 +34,51 @@ class CalicoEnv(gym.Env):
         self.quilt_size = 5
         self.num_squares = self.quilt_size * self.quilt_size # Square grid board for simplicity
         self.grid_shape = (self.quilt_size, self.quilt_size)
-        self.action_space = gym.spaces.Discrete(self.num_squares)
-
+        
         self.player_hands = [self.draw_starting_tiles(2) for _ in range(self.n_players)]
+
+        self.action_space = gym.spaces.Discrete(self.num_squares)
+        self.observation_space = gym.spaces.Box(0, 1, (self.num_squares * self.card_types + self.n_players + self.action_space.n,))
+        self.verbose = verbose
 
 
     # Obervation / discritizing the board
     @property
     def observation(self):
-        if self.players[self.current_player_num].token.number == 1:
-            position = np.array([x.number for x in self.board]).reshape(self.grid_shape)
-        else:
-            position = np.array([-x.number for x in self.board]).reshape(self.grid_shape)
-
-        la_grid = np.array(self.legal_actions).reshape(self.grid_shape)
-        out = np.stack([position,la_grid], axis = -1)
-        return out
-
+        # Initialize the observation array
+        obs = np.zeros((self.num_squares, self.card_types), dtype=int)
+        
+        # Add the tiles on the quilt board to the observation
+        for row in range(len(self.quilt_board)):
+            for col in range(len(self.quilt_board[row])):
+                tile = self.quilt_board[row, col]
+                if tile != 0:  # Tile is present
+                    color_index = tile // len(self.patterns)
+                    pattern_index = tile % len(self.patterns)
+                    obs[row * len(self.quilt_board) + col][color_index * len(self.patterns) + pattern_index] = 1
+        
+        # Flatten the observation array
+        ret = obs.flatten()
+        
+        # Return the flattened observation array
+        return ret
+    
     @property
     def legal_actions(self):
-        legal_actions = []
-        for action_num in range(len(self.board)):
-            if self.board[action_num].number==0: #empty square
-                legal_actions.append(1)
-            else:
-                legal_actions.append(0)
-        return np.array(legal_actions)
+        # Initialize the legal actions array
+        legal_actions = np.zeros(self.num_squares)
+        
+        # Check each position on the quilt board
+        for row in range(len(self.quilt_board)):
+            for col in range(len(self.quilt_board[row])):
+                # Check if the position is empty
+                if self.quilt_board[row, col] == 0:
+                    # Set the corresponding index in the legal actions array to 1
+                    legal_actions[row * len(self.quilt_board) + col] = 1
+        
+        # Return the legal actions array
+        return legal_actions
+
         
 
     ####### Define scoring based of simplified version including 4 ways to score #######
