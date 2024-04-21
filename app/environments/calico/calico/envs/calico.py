@@ -32,8 +32,8 @@ class CalicoEnv(gym.Env):
 
         # Defining 5x5 square "quilt" grid
         self.quilt_size = 5
-        self.num_squares = self.quilt_length * self.quilt_length # Square grid board for simplicity
-        self.grid_shape = (self.grid_length, self.grid_length)
+        self.num_squares = self.quilt_size * self.quilt_size # Square grid board for simplicity
+        self.grid_shape = (self.quilt_size, self.quilt_size)
         self.action_space = gym.spaces.Discrete(self.num_squares)
 
         self.player_hands = [self.draw_starting_tiles(2) for _ in range(self.n_players)]
