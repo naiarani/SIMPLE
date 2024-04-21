@@ -191,8 +191,8 @@ class CalicoEnv(gym.Env):
         self.current_player_num = 0
         self.turns_taken = 0
 
-    def draw_starting_tiles(self, n):
-        return [self.draw_tile() for _ in range(n)]
+    def draw_starting_tiles(self, 2):
+        return [self.draw_tile() for _ in range(2)]
 
     def draw_tile(self):
         if self.contents:
