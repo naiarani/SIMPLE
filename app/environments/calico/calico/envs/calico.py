@@ -196,7 +196,7 @@ class CalicoEnv(gym.Env):
     def draw_tile(self):
         if self.contents:
             return self.contents.pop()
-         else:
+        else:
             return None
 
         logger.debug(f'\n\n---- NEW GAME ----')
