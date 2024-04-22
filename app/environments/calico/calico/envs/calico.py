@@ -68,8 +68,8 @@ class CalicoEnv(gym.Env):
                 player_observation[self.grid_shape[0] - 1, idx, color_index * len(self.patterns) + pattern_index] = 1
 
             player_observations.append(player_observation)
-
-        return player_observations
+        
+        return np.concatenate(player_observations)
 
     @property
     def legal_actions(self):
@@ -200,8 +200,14 @@ class CalicoEnv(gym.Env):
         return self.observation
         return observation
 
+    # def draw_starting_tiles(self, n):
+        # return [self.draw_tile() for _ in range(n)]
+
     def draw_starting_tiles(self, n):
-        return [self.draw_tile() for _ in range(n)]
+        random.shuffle(self.contents)
+        drawn_tiles = self.contents[:n]
+        self.contents = self.contents[n:]
+        return drawn_tiles
 
 
     def draw_tile(self):
