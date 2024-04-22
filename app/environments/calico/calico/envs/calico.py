@@ -207,9 +207,10 @@ class CalicoEnv(gym.Env):
     def draw_tile(self):
         if self.contents:
             tile = self.contents.pop()
-            return {'color': tile['color'], 'pattern': tile['pattern']}
+            return {'color': self.colors.index(tile['color']), 'pattern': self.patterns.index(tile['pattern'])}
         else:
             return None
+
 
     def render(self):
         # Output quilt boards for each player
