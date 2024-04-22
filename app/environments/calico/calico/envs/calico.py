@@ -226,7 +226,7 @@ class CalicoEnv(gym.Env):
             print()  # Newline after each player's quilt board
 
         # Output hands for each player
-        for player_num, hand in enumerate(self.hands):
+        for player_num, hand in enumerate(self.player_hands):
             print(f"Player {player_num} Hand:")
             for tile in hand:
                 color_index = tile['color'] // len(self.patterns)
