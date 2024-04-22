@@ -59,12 +59,12 @@ class CalicoEnv(gym.Env):
                     tile = self.quilt_boards[player_num][row, col]
                     if tile != 0:
                         color_index = self.colors.index(tile['color'])
-                        pattern_index = tile % len(self.patterns)
+                        pattern_index = self.patterns.index(tile['pattern'])
                         player_observation[row, col, color_index * len(self.patterns) + pattern_index] = 1
 
             for idx, tile in enumerate(self.player_hands[player_num]):
                 color_index = self.colors.index(tile['color'])
-                pattern_index = tile['pattern'] % len(self.patterns)
+                pattern_index = self.patterns.index(tile['pattern'])
                 player_observation[self.grid_shape[0] - 1, idx, color_index * len(self.patterns) + pattern_index] = 1
 
             player_observations.append(player_observation)
@@ -227,7 +227,7 @@ class CalicoEnv(gym.Env):
                     tile = quilt_board[row, col]
                     if tile != 0:
                         color_index = self.colors.index(tile['color'])
-                        pattern_index = tile % len(self.patterns)
+                        pattern_index = self.patterns.index(tile['pattern'])
                         print(f"{self.colors[color_index]} {self.patterns[pattern_index]}", end=" ")
                     else:
                         print("Empty", end=" ")
@@ -239,7 +239,7 @@ class CalicoEnv(gym.Env):
             print(f"Player {player_num} Hand:")
             for tile in hand:
                 color_index = self.colors.index(tile['color'])
-                pattern_index = tile['pattern'] % len(self.patterns)
+                pattern_index = self.patterns.index(tile['pattern'])
                 print(f"{self.colors[color_index]} {self.patterns[pattern_index]}", end=" ")
             print()  # Newline after each player's hand
 
