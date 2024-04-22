@@ -35,7 +35,7 @@ class CalicoEnv(gym.Env):
         self.num_squares = self.quilt_size * self.quilt_size 
 
         self.action_space = gym.spaces.Discrete(self.num_squares)
-        self.observation_space = gym.spaces.Box(0, 1, (self.num_squares * self.tiles_types + self.n_players + self.action_space.n,))
+        self.observation_space = gym.spaces.Box(0, 1, (self.grid_shape,))
         self.verbose = verbose
 
         self.quilt_boards = [np.zeros(self.board_size, dtype=int) for _ in range(self.n_players)]
