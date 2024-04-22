@@ -194,6 +194,12 @@ class CalicoEnv(gym.Env):
         self.current_player_num = 0
         self.turns_taken = 0
 
+        logger.debug(f'\n\n---- NEW GAME ----')
+
+        # Return the initial observation
+        return self.observation
+        return observation
+
     def draw_starting_tiles(self, n):
         return [self.draw_tile() for _ in range(n)]
 
@@ -204,12 +210,6 @@ class CalicoEnv(gym.Env):
             return {'color': tile['color'], 'pattern': tile['pattern']}
         else:
             return None
-
-        logger.debug(f'\n\n---- NEW GAME ----')
-
-        # Return the initial observation
-        return self.observation
-        return observation
 
     def render(self):
         # Output quilt boards for each player
@@ -231,7 +231,7 @@ class CalicoEnv(gym.Env):
         for player_num, hand in enumerate(self.player_hands):
             print(f"Player {player_num} Hand:")
             for tile in hand:
-                color_index = tile['color'] // len(self.patterns)
+                color_index = tile['pattern'] % len(self.colors)
                 pattern_index = tile['color'] % len(self.patterns)
                 print(f"{self.colors[color_index]} {self.patterns[pattern_index]}", end=" ")
             print()  # Newline after each player's hand
