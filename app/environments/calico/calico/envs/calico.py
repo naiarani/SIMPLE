@@ -62,7 +62,7 @@ class CalicoEnv(gym.Env):
                         pattern_index = tile % len(self.patterns)
                         player_observation[row, col, color_index * len(self.patterns) + pattern_index] = 1
 
-            for idx, tile in enumerate(self.hands[player_num]):
+            for idx, tile in enumerate(self.player_hands[player_num]):
                 color_index = tile['color'] // len(self.patterns)
                 pattern_index = tile['color'] % len(self.patterns)
                 player_observation[self.grid_shape[0] - 1, idx, color_index * len(self.patterns) + pattern_index] = 1
@@ -74,7 +74,7 @@ class CalicoEnv(gym.Env):
     @property
     def legal_actions(self):
         legal_actions = np.zeros(self.board_size[0] * self.board_size[1], dtype=int)
-        current_player_hand = self.hands[self.current_player_num]
+        current_player_hand = self.player_hands[self.current_player_num]
 
         for row in range(self.board_size[0]):
             for col in range(self.board_size[1]):
@@ -105,7 +105,7 @@ class CalicoEnv(gym.Env):
             done = True
         else:
             # Get the current player's hand and the tile to place
-            current_player_hand = self.hands[self.current_player_num]
+            current_player_hand = self.player_hands[self.current_player_num]
             tile_to_place = current_player_hand.pop(action)
 
             # Place the tile on the quilt board
