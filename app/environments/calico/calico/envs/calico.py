@@ -197,9 +197,11 @@ class CalicoEnv(gym.Env):
     def draw_starting_tiles(self, n):
         return [self.draw_tile() for _ in range(n)]
 
+
     def draw_tile(self):
         if self.contents:
-            return self.contents.pop()
+            tile = self.contents.pop()
+            return {'color': tile['color'], 'pattern': tile['pattern']}
         else:
             return None
 
