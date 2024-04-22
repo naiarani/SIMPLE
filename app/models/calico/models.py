@@ -44,7 +44,7 @@ class CustomPolicy(ActorCriticPolicy):
 
 
 def split_input(obs, split):
-    return obs[:, :-split], obs[:, -split:]
+    return obs[:, :, :, :-split], obs[:, :, :, -split:]
 
 
 def value_head(y):
@@ -59,9 +59,10 @@ def policy_head(y, legal_actions):
         y = dense(y, FEATURE_SIZE)
     policy = dense(y, ACTIONS, batch_norm=False, activation=None, name='pi')
 
+    # Apply mask to policy logits
     mask = Lambda(lambda x: (1 - x) * -1e8)(legal_actions)
-
     policy = Add()([policy, mask])
+
     return policy
 
 
