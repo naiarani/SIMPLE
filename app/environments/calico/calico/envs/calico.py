@@ -35,7 +35,7 @@ class CalicoEnv(gym.Env):
         self.num_squares = self.quilt_size * self.quilt_size
 
         self.action_space = gym.spaces.Discrete(25)
-        self.observation_space = gym.spaces.Box(low=0, high=1, shape=(25,5,36), dtype=np.float32)
+        self.observation_space = gym.spaces.Box(low=0, high=1, shape=(25,5,36))
         self.verbose = verbose
 
         self.quilt_boards = [np.zeros(self.board_size, dtype=int) for _ in range(self.n_players)]
@@ -46,7 +46,7 @@ class CalicoEnv(gym.Env):
     def observation(self):
         player_observations = []
         for player_num in range(self.n_players):
-            player_observation = np.zeros((25,5,36), dtype=int)
+            player_observation = np.zeros((25,5,36))
             # Populate observation for player's quilt board
             for row in range(self.grid_shape[0]):
                 for col in range(self.grid_shape[1]):
