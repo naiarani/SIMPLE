@@ -44,26 +44,21 @@ class CalicoEnv(gym.Env):
 
     @property
     def observation(self):
-        player_observations = []
-        for player_num in range(self.n_players):
-            player_observation = np.zeros((5, 5, 36))
-            # Populate observation for player's quilt board
-            for row in range(self.grid_shape[0]):
-                for col in range(self.grid_shape[1]):
-                    tile = self.quilt_boards[player_num][row, col]
-                    if tile != 0:
-                        color_index = self.colors.index(tile['color'])
-                        pattern_index = self.patterns.index(tile['pattern'])
-                        player_observation[row, col, color_index * len(self.patterns) + pattern_index] = 1
-            # Populate observation for player's hand
-            for idx, tile in enumerate(self.player_hands[player_num]):
-                color_index = self.colors.index(tile['color'])
-                pattern_index = self.patterns.index(tile['pattern'])
-                player_observation[self.grid_shape[0] - 1, idx, color_index * len(self.patterns) + pattern_index] = 1
-            player_observations.append(player_observation)
-    
-        # Convert the list of player observations into a single tensor along the batch dimension
-        return np.array(player_observations)
+        player_observation = np.zeros((25, 5, 36))
+        # Populate observation for player's quilt board
+        for row in range(self.grid_shape[0]):
+            for col in range(self.grid_shape[1]):
+                tile = self.quilt_boards[self.current_player_num][row, col]
+                if tile != 0:
+                    color_index = self.colors.index(tile['color'])
+                    pattern_index = self.patterns.index(tile['pattern'])
+                    player_observation[row, col, color_index * len(self.patterns) + pattern_index] = 1
+        # Populate observation for player's hand
+        for idx, tile in enumerate(self.player_hands[self.current_player_num]):
+            color_index = self.colors.index(tile['color'])
+            pattern_index = self.patterns.index(tile['pattern'])
+            player_observation[self.grid_shape[0] - 1, idx, color_index * len(self.patterns) + pattern_index] = 1
+        return player_observation
 
     
     def legal_actions(self):
