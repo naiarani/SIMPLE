@@ -72,6 +72,14 @@ class CalicoEnv(gym.Env):
                             legal_actions[player_num, row * self.board_size[1] + col] = 1
         return legal_actions
 
+    
+    def choose_action(self, env, choose_best_action=False, mask_invalid_actions=True):
+        state = env.observation
+        legal_actions = env.legal_actions()
+        action, value = self.predict(state, legal_actions)
+        logger.debug(f'Value {value[0]:.2f}')  # Assuming value is a one-dimensional array
+        return action
+
 
     def step(self, action):
         reward = 0
