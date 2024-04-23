@@ -1,6 +1,6 @@
 
 import gym
-from gym import Env
+# from gym import Env
 from gym.spaces import Discrete, Box
 import numpy as np
 import itertools
