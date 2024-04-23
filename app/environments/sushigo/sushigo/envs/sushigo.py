@@ -1,5 +1,6 @@
 
 import gym
+gym import spaces
 import numpy as np
 
 import config
