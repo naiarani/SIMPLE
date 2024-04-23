@@ -8,7 +8,9 @@ from .classes import *
 import random
 
 class CalicoEnv(gym.Env):
-    def __init__(self):
+    metadata = {'render.modes': ['human']}
+
+    def __init__(self, verbose=False, manual=False):
         super(CalicoEnv, self).__init__()
         self.board_size = (5, 5)
         self.num_colors = 6
