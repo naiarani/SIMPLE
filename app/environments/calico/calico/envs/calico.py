@@ -20,7 +20,7 @@ class CalicoEnv(gym.Env):
 
         self.n_rounds = 25
 
-        self.n_players = 2  # player 0 and player 1
+        self.n_players = 3  # player 0 and player 1
         self.current_player_num = 0
 
         self.colors = ['red', 'yellow', 'green', 'light blue', 'navy', 'purple']
