@@ -46,7 +46,7 @@ class CalicoEnv(gym.Env):
     def observation(self):
         player_observations = []
         for player_num in range(self.n_players):
-            player_observation = np.zeros((25,5,36))
+            player_observation = np.zeros((5, 5, 36))
             # Populate observation for player's quilt board
             for row in range(self.grid_shape[0]):
                 for col in range(self.grid_shape[1]):
@@ -61,7 +61,10 @@ class CalicoEnv(gym.Env):
                 pattern_index = self.patterns.index(tile['pattern'])
                 player_observation[self.grid_shape[0] - 1, idx, color_index * len(self.patterns) + pattern_index] = 1
             player_observations.append(player_observation)
+    
+        # Convert the list of player observations into a single tensor along the batch dimension
         return np.array(player_observations)
+
     
     def legal_actions(self):
         legal_actions = np.zeros((self.n_players, self.board_size[0] * self.board_size[1]), dtype=int)
