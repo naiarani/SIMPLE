@@ -17,30 +17,37 @@ class CustomPolicy(ActorCriticPolicy):
 
         with tf.variable_scope("model", reuse=reuse):
             # Define input placeholders
-            obs, legal_actions = split_input(self.processed_obs, ACTIONS)
+            obs_ph = tf.placeholder(shape=(None, 5, 5, 36), dtype=tf.float32, name='obs_ph')
+            legal_actions_ph = tf.placeholder(shape=(None, 25), dtype=tf.float32, name='legal_actions_ph')
 
             # Extract features using a ResNet-like architecture
-            extracted_features = resnet_extractor(obs, **kwargs)
+            extracted_features = resnet_extractor(obs_ph, **kwargs)
 
             # Policy head
-            self._policy = policy_head(extracted_features, legal_actions)
-            self._proba_distribution = CategoricalProbabilityDistribution(self._policy)
+            policy_logits = policy_head(extracted_features)
+            masked_policy_logits = policy_logits + (1 - legal_actions_ph) * tf.constant(-1e8)  # Apply mask to policy logits
 
             # Value head
-            self._value_fn = value_head(extracted_features)
+            value_fn = value_head(extracted_features)
 
         self._setup_init()
 
+        self._obs_ph = obs_ph
+        self._legal_actions_ph = legal_actions_ph
+        self._policy_logits = policy_logits
+        self._value_fn = value_fn
+
     def step(self, obs, state=None, mask=None, deterministic=False):
         action, value, neglogp = self.sess.run([self.action, self.value_flat, self.neglogp],
-                                               {self.obs_ph: obs})
+                                               {self._obs_ph: obs, self._legal_actions_ph: mask})
         return action, value, self.initial_state, neglogp
 
     def proba_step(self, obs, state=None, mask=None):
-        return self.sess.run(self.policy_proba, {self.obs_ph: obs})
+        return self.sess.run(self.policy_proba, {self._obs_ph: obs, self._legal_actions_ph: mask})
 
     def value(self, obs, state=None, mask=None):
-        return self.sess.run(self.value_flat, {self.obs_ph: obs})
+        return self.sess.run(self.value_flat, {self._obs_ph: obs, self._legal_actions_ph: mask})
+
 
 
 def split_input(obs, split):
