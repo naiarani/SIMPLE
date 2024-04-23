@@ -1,7 +1,5 @@
 
 import gym
-# from gym import Env
-from gym.spaces import Discrete, Box
 import numpy as np
 import itertools
 from stable_baselines import logger
@@ -22,7 +20,7 @@ class CalicoEnv(gym.Env):
 
         self.n_rounds = 25
 
-        self.n_players = 3  # player 0 and player 1
+        self.n_players = 2  # player 0 and player 1
         self.current_player_num = 0
 
         self.colors = ['red', 'yellow', 'green', 'light blue', 'navy', 'purple']
@@ -37,33 +35,31 @@ class CalicoEnv(gym.Env):
         self.num_squares = self.quilt_size * self.quilt_size
 
         self.action_space = gym.spaces.Discrete(25)
-        self.observation_space = gym.spaces.Box(
-            low=0, 
-            high=1, 
-            shape=(self.grid_shape[0], self.grid_shape[1], len(self.colors) * len(self.patterns)), 
-            dtype=np.float32
-        )
+        self.observation_space = gym.spaces.Box(low=0, high=1, shape=(25,5,36))
+        self.verbose = verbose
+
         self.quilt_boards = [np.zeros(self.board_size, dtype=int) for _ in range(self.n_players)]
 
         self.player_hands = [self.draw_starting_tiles(self.tiles_per_player) for _ in range(self.n_players)]
 
     @property
-    def observation(self):
-        player_observation = np.zeros((self.grid_shape[0], self.grid_shape[1], len(self.colors) * len(self.patterns)), dtype=int)
-        # Populate observation for player's quilt board
-        for row in range(self.grid_shape[0]):
-            for col in range(self.grid_shape[1]):
-                tile = self.quilt_boards[self.current_player_num][row, col]
-                if tile != 0:
-                    color_index = self.colors.index(tile['color'])
-                    pattern_index = self.patterns.index(tile['pattern'])
-                    player_observation[row * self.grid_shape[1] + col, color_index, pattern_index] = 1
-        # Populate observation for player's hand
-        for idx, tile in enumerate(self.player_hands[self.current_player_num]):
-            color_index = self.colors.index(tile['color'])
-            pattern_index = self.patterns.index(tile['pattern'])
-            player_observation[-1, idx, color_index * len(self.patterns) + pattern_index] = 1
-        return player_observation
+@property
+def observation(self):
+    player_observation = np.zeros((25, 5, 36))
+    # Populate observation for player's quilt board
+    for row in range(self.grid_shape[0]):
+        for col in range(self.grid_shape[1]):
+            tile = self.quilt_boards[self.current_player_num][row, col]
+            if tile != 0:
+                color_index = self.colors.index(tile['color'])
+                pattern_index = self.patterns.index(tile['pattern'])
+                player_observation[row * self.grid_shape[1] + col, color_index, pattern_index] = 1
+    # Populate observation for player's hand
+    for idx, tile in enumerate(self.player_hands[self.current_player_num]):
+        color_index = self.colors.index(tile['color'])
+        pattern_index = self.patterns.index(tile['pattern'])
+        player_observation[-1, idx, color_index * len(self.patterns) + pattern_index] = 1
+    return player_observation
 
     
     def legal_actions(self):
@@ -215,13 +211,3 @@ class CalicoEnv(gym.Env):
             return winners[0] 
         else:
             return None
-
-
-    def choose_action(self, env, choose_best_action=False, mask_invalid_actions=True):
-        if self.name == 'rules':
-            action_probs = np.array(env.rules_move())
-            value = None
-        else:
-            action_probs = self.model.action_probability(env.observation)
-            value = self.model.policy_pi.value(np.array([env.observation]))[0]
-            logger.debug(f'Value {np.asscalar(value):.2f}')  # Convert value to scalar before logging
